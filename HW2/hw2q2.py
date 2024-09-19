@@ -45,7 +45,7 @@ index = IndexHash(t=cleaned_input_string, ln=k)
 exactly_one_keys = 0
 
 for item in index.index:
-    if len(index[item]) == 1:
+    if len(index.index[item]) == 1:
         exactly_one_keys += 1
 
 with open(output_file, "w") as f:

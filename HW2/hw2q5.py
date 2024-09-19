@@ -1,5 +1,7 @@
 import sys
 
+from collections import defaultdict
+
 def hamming_distance(str1, str2):
     return sum(c1 != c2 for c1, c2 in zip(str1, str2))
 
@@ -47,7 +49,7 @@ index = IndexHash(reference_genome, 6)
 
 matches = set()
 
-with open(fastq_file, 'r') as fh, open(output_file ,"w") as out:
+with open(fastq_file, 'r') as fh:
     while True:
         first_line = fh.readline()
         if len(first_line) == 0:
@@ -62,8 +64,6 @@ with open(fastq_file, 'r') as fh, open(output_file ,"w") as out:
         offsets_batches = [index.query(partition) for partition in partitions]
 
         index_hits = [len(offsets_batch) for offsets_batch in offsets_batches]
-
-        mismatch_offsets = {0: [], 1: [], 2: [] , 3:[] , 4: []}
 
         for offsets_batch, offset_location in zip(offsets_batches, range(0, len(seq), 6)):
 
@@ -82,35 +82,37 @@ with open(fastq_file, 'r') as fh, open(output_file ,"w") as out:
 
 matches = list(matches)
 
-for i in range(len(reference_genome)):
+with open(output_file ,"w") as out:
 
-    base_qualities = {"A": 0, "C": 0, "G": 0, "T": 0}
+    for i in range(len(reference_genome)):
 
-    for match in matches:
-        if i>= match[2] and i < match[3] and match[0][i-match[2]] != reference_genome[i]:
-            base_quality = phred33_to_q(match[1][i-match[2]])
+        base_qualities = defaultdict(int)
 
-            if match[0][i-match[2]] in base_qualities:
+        for match in matches:
+            if i>= match[2] and i < match[3]:
+                base_quality = phred33_to_q(match[1][i-match[2]])
+
                 base_qualities[match[0][i-match[2]]] += base_quality
+        
+        if len(base_qualities) != 0:
+            base_qualities[reference_genome[i]] = 0
+        
+            max_ref = max(base_qualities, key=base_qualities.get)
 
-    max_number = second_max_number = 0
-    max_ref = second_max_ref = ""
-    
-    for key, num in base_qualities.items():
-        if num > max_number:
-            second_max_number = max_number
-            max_number = num
-            max_ref = key
-        elif num > second_max_number and num != max_number:
-            second_max_number = num
-            second_max_ref = key
-    
-    if max_number > 20:
-        if max_number == second_max_number:
-            if max_ref > second_max_ref:
-                print(i, reference_genome[i], second_max_ref, second_max_number, max_ref, max_number)
-            else:
-                print(i, reference_genome[i], max_ref, max_number, second_max_ref, second_max_number)
+            max_number = base_qualities[max_ref]
 
-        else:
-            print(i, reference_genome[i], max_ref, max_number, "-" if second_max_number <= 20 else second_max_ref, 0 if second_max_number <= 20 else second_max_number)
+            base_qualities[max_ref] = 0
+
+            second_max_ref = max(base_qualities, key=base_qualities.get)
+
+            second_max_number = base_qualities[second_max_ref]
+            
+            if max_number > 20 and max_ref != reference_genome[i]:
+                if max_number == second_max_number:
+                    if max_ref > second_max_ref:
+                        out.write(f"{i} {reference_genome[i]} {second_max_ref} {second_max_number} {max_ref} {max_number}\n")
+                    else:
+                        out.write(f"{i} {reference_genome[i]} {max_ref} {max_number} {second_max_ref} {second_max_number}\n")
+
+                else:
+                    out.write(f"{i} {reference_genome[i]} {max_ref} {max_number} {'-' if second_max_number <= 20 else second_max_ref} {0 if second_max_number <= 20 else second_max_number}\n")

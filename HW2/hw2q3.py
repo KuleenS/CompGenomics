@@ -54,6 +54,8 @@ for item in index.index:
 read_max_matches = 0
 read_max_matches_min_offset = 0
 
+total_matches = set()
+
 with open(fastq_file, 'r') as fh:
     while True:
         first_line = fh.readline()
@@ -72,16 +74,17 @@ with open(fastq_file, 'r') as fh:
 
         for offset in offsets:
 
-            if seq[6:] == reference_genome[offset+6:offset+len(seq)]:
-                total_matches += 1
+            if len(seq) + offset <= len(reference_genome) and seq[6:] == reference_genome[offset+6:offset+len(seq)]:
                 match_offsets.append(offset)
+
+                total_matches.add((offset, seq))
         
-        if len(match_offsets) >= read_max_matches:
+        if len(match_offsets) > read_max_matches or (len(match_offsets) != 0 and len(match_offsets) == read_max_matches and match_offsets[0] < read_max_matches_min_offset):
             read_max_matches = len(match_offsets)
 
-            read_max_matches_min_offset = min(read_max_matches_min_offset, min(match_offsets))
+            read_max_matches_min_offset = match_offsets[0]
 
-print(f"{','.join(sorted(max_hitters))} {total_matches} {read_max_matches_min_offset}")
+print(f"{','.join(sorted(max_hitters))} {len(total_matches)} {read_max_matches_min_offset}")
 
 with open(output_file, "w") as f:
-    f.write(f"{','.join(sorted(max_hitters))} {total_matches} {read_max_matches_min_offset}")
+    f.write(f"{','.join(sorted(max_hitters))} {len(total_matches)} {read_max_matches_min_offset}")

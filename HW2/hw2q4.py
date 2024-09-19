@@ -81,13 +81,11 @@ with open(fastq_file, 'r') as fh, open(output_file ,"w") as out:
             mismatch_str += f"{item}:"
 
             if len(mismatch_offsets[item]) != 0:
-                mismatch_str += ",".join([str(x) for x in set(mismatch_offsets[item])])
+                mismatch_str += ",".join([str(x) for x in sorted(list(set(mismatch_offsets[item])))])
             
             mismatch_str += " "
         
         total_str = f'{" ".join([str(x) for x in index_hits])} {mismatch_str}'
 
-        print(total_str)
-    
         out.write(f'{total_str}\n')
             
